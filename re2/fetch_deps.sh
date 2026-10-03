@@ -6,7 +6,7 @@
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 tp="$here/third_party"
-REF_REF="${REF_REF:-master}"
+REF_REF="${REF_REF:-v1.5.7}"  # plugin API 1.10: loads in REFramework builds from July 2024 on (newer ones accept older plugins)
 RESHADE_REF="${RESHADE_REF:-v6.3.0}"  # build against an older add-on API: the add-on then loads in ReShade 6.3.0 and every newer version
 mkdir -p "$tp"
 

@@ -13,6 +13,9 @@ mod in each lets them talk:
 - **RE2 shows up in the city.** RE2's picture appears as a bodycam panel while you build, and the survivor is a
   marker on your map.
 
+**Just want to play? Download [`dist/RaccoonCitySkylines-v0.1.zip`](dist/RaccoonCitySkylines-v0.1.zip) and follow
+[docs/SETUP_GUIDE.md](docs/SETUP_GUIDE.md).** The rest of this page is for building from source.
+
 This repurposes the "passthrough" method behind the September 2026 game-mashup videos (Minecraft inside GTA V
 and Elden Ring), from Rehan Sheikh's open-source
 [`universal-modder`](https://github.com/rehan-remade/universal-modder). **[docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md)**
@@ -33,7 +36,7 @@ The full wire format is in [protocol/PROTOCOL.md](protocol/PROTOCOL.md).
 
 | path | what |
 |---|---|
-| `cities/RaccoonCitySkylines/` | The Cities: Skylines mod (C#, ICities + CitiesHarmony). `Bridge` runs everything; `LinkServer` is the link; `CameraSync` + `PoseMapper` drive the camera from RE2; `SkylineExporter` publishes the frame; `OutbreakModel` / `OutbreakController` / `CityProbe` run the outbreak; `BodycamPanel` and `LeonMarker` show RE2 in the city |
+| `cities/RaccoonCitySkylines/` | The Cities: Skylines mod (C#, ICities only, so the game can compile it from source). `Bridge` runs everything; `LinkServer` is the link; `CameraSync` + `PoseMapper` drive the camera from RE2; `SkylineExporter` publishes the frame; `OutbreakModel` / `OutbreakController` / `CityProbe` run the outbreak; `BodycamPanel` and `LeonMarker` show RE2 in the city |
 | `cities/stubs/`, `cities/tests/`, `cities/build.sh` | Compile-only stand-ins for the game's API (so CI type-checks the whole mod), unit tests, and a stand-in city built from the real `LinkServer` |
 | `re2/src/` | The RE2 plugin: `plugin.cpp` (REFramework entry, camera, link, Lua file bridge), `compositor.cpp` (ReShade add-on: city into the sky, bodycam out), `re_camera.cpp`, `common/` (link, frames, JSON; portable and tested on Linux) |
 | `re2/shaders/RaccoonSkylines.fx` | The ReShade effect: sky replacement, colour/brightness match, rain haze, outbreak vignette, blackout |
@@ -44,8 +47,7 @@ The full wire format is in [protocol/PROTOCOL.md](protocol/PROTOCOL.md).
 ## Requirements
 
 - Windows 10/11, with both games running at once (a mid-range GPU managed MC + GTA V fine).
-- **Cities: Skylines** (the 2015 game), with the Harmony mod (Steam Workshop item 2040656402, the dependency
-  `CitiesHarmony.API` uses).
+- **Cities: Skylines** (the 2015 game).
 - **Resident Evil 2** (2019) on Steam, running in **DX11** (Graphics > Rendering mode). Single-player only.
 - **REFramework** for RE2 (`dinput8.dll` + `reframework/`).
 - **ReShade 6 with add-on support** (the "with full add-on support" installer) for RE2, with depth enabled.
@@ -97,6 +99,7 @@ cities/build.sh            # type-checks the mod against cities/stubs, runs 63 u
 re2/build_mingw.sh         # cross-compiles the DLL against the real REFramework and ReShade headers
 tools/check_shader.sh      # compiles the .fx with ReShade's own FX compiler, built from source
 python -m pytest tests     # 12 end-to-end tests across C#, C++ and Python
+tools/package.sh           # all of the above, then dist/RaccoonCitySkylines-v<version>.zip
 ```
 
 `python tools/fake_city.py` stands in for Cities: Skylines (link, outbreak state, a synthetic skyline frame), and
@@ -112,9 +115,8 @@ are tested across all three languages. Nothing has been run inside either game y
 - **RE2 names in `raccoon_skylines.lua`** marked `VERIFY`: the game-rank singleton and field, the player and
   hit-point accessors, and the methods hooked for kills and Mr. X. Look them up in REFramework's Object
   Explorer. A wrong name turns off that one feature with a log line, and the test buttons still work.
-- **Cities: Skylines API calls** in `CityProbe.cs`, `CameraSync.cs`, `SkylineExporter.cs` and `LeonMarker.cs`
-  (`ImmaterialResourceManager.CheckLocalResource`, `ElectricityManager.CheckElectricity`, `UIView.Show`,
-  `ToolManager.EndOverlayImpl`). They follow published CS1 mods, but `cities/stubs/GameStubs.cs` only mirrors
+- **Cities: Skylines API calls** in `CityProbe.cs`, `CameraSync.cs` and `SkylineExporter.cs`
+  (`ImmaterialResourceManager.CheckLocalResource`, `ElectricityManager.CheckElectricity`, `UIView.Show`). They follow published CS1 mods, but `cities/stubs/GameStubs.cs` only mirrors
   them, so the real `dotnet build` is the check.
 - **Camera conventions:** whether RE Engine's `get_FOV` is vertical, and the Z mirror. Both are settings, see *Play*.
 - **ReShade depth on RE2:** the sky mask needs ReShade's generic depth to pick RE2's main depth buffer. Use the
@@ -133,7 +135,6 @@ The link listens on 127.0.0.1 only.
   [universal-modder](https://github.com/rehan-remade/universal-modder) (MIT), inspired by chasm's
   Minecraft-in-Skyrim and TobynJacobs' Minecraft-in-Elden-Ring.
 - [REFramework](https://github.com/praydog/REFramework) by praydog, [ReShade](https://reshade.me) by crosire,
-  [CitiesHarmony](https://github.com/boformer/CitiesHarmony) by boformer, [Harmony](https://github.com/pardeike/Harmony)
-  by Andreas Pardeike.
+  and the Cities: Skylines modding community.
 - Cities: Skylines belongs to Colossal Order and Paradox Interactive; Resident Evil 2 to Capcom. This is a fan
   project.

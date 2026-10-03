@@ -8,7 +8,7 @@
   -->
   <PropertyGroup>
     <TargetFramework>net35</TargetFramework>
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>4</LangVersion>
     <AssemblyName>RaccoonCitySkylines</AssemblyName>
     <RootNamespace>RaccoonCitySkylines</RootNamespace>
     <Deterministic>true</Deterministic>
@@ -18,8 +18,6 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net35" Version="1.0.3" PrivateAssets="all" />
-    <PackageReference Include="CitiesHarmony.API" Version="2.2.0" />
-    <PackageReference Include="Lib.Harmony" Version="2.2.2" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <ItemGroup>
@@ -31,7 +29,7 @@
 
   <Target Name="DeployToMods" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT'">
     <MakeDir Directories="$(ModsDir)" />
-    <Copy SourceFiles="$(TargetPath);$(OutDir)CitiesHarmony.API.dll" DestinationFolder="$(ModsDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(ModsDir)" />
     <Message Importance="high" Text="Raccoon City Skylines -> $(ModsDir)" />
   </Target>
 </Project>

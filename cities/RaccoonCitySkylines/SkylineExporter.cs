@@ -11,14 +11,17 @@ namespace RaccoonCitySkylines
     /// windowed at a small size (960x540 is plenty for a skyline) and the stall is a few milliseconds.
     /// The game's UI is hidden while the feed runs so it doesn't end up in RE2's sky.
     /// </summary>
+    public delegate long LongSource();
+    public delegate float FloatSource();
+
     public sealed class SkylineExporter : MonoBehaviour
     {
         public const int MaxWidth = 1920;
         public const int MaxHeight = 1080;
 
-        public Func<long> HostFrame = () => 0;
-        public Func<float> Daylight = () => 1f;
-        public Func<float> Infection = () => 0f;
+        public LongSource HostFrame = () => 0;
+        public FloatSource Daylight = () => 1f;
+        public FloatSource Infection = () => 0f;
         public float Fps = 30f;
 
         FrameWriter writer;

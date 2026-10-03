@@ -33,7 +33,7 @@ GTA V story mode                                     Minecraft + Fabric mod
 
 ## Applying it to Cities: Skylines and Resident Evil 2
 
-Cities: Skylines is a top-down city builder (Unity 5.6, Mono, C# mods through ICities + Harmony). Resident Evil 2
+Cities: Skylines is a top-down city builder (Unity 5.6, Mono, C# mods through ICities). Resident Evil 2
 (2019) is a third-person survival horror game on Capcom's RE Engine (REFramework for code, ReShade for post
 effects). They have no shared mechanic, so a literal "Steve in Los Santos" copy (one game's character walking
 in the other's world) doesn't fit. RE2's maps are narrow corridors and streets, and a C:S city is kilometres
@@ -55,7 +55,7 @@ across. What does fit is each game supplying what the other lacks:
 |---|---|---|
 | ScriptHookV + ASI loader (host code) | **REFramework plugin** `RaccoonSkylines.dll` + **REFramework Lua** `raccoon_skylines.lua` | RE Engine's community framework, like ScriptHookV for RAGE |
 | ReShade add-on + `MCPassthrough.fx` | **ReShade add-on in the same DLL** + `RaccoonSkylines.fx` | Kept as is; ReShade works on RE2 (DX11) |
-| Fabric mod (guest) | **ICities mod** + **CitiesHarmony** (`cities/RaccoonCitySkylines`) | Cities: Skylines' official mod API; Harmony for the overlay hook |
+| Fabric mod (guest) | **ICities mod** (`cities/RaccoonCitySkylines`) | Cities: Skylines' official mod API, no other dependency, so the game can compile it from source |
 | WebSocket on 127.0.0.1:25599 | **TCP, newline-delimited JSON** on 127.0.0.1:25600 | Cities: Skylines runs Mono's .NET 3.5, which has no WebSocket client or server |
 | shm `Local\MCPassthroughFrame` (colour + depth) | shm `Local\RaccoonSkylines.City` (colour) **and** `Local\RaccoonSkylines.Bodycam` (the other way) | Sky replacement needs RE2's depth, not the city's; the bodycam adds the reverse direction |
 | GTA camera -> Minecraft camera (1 m = 1 block) | RE2 camera -> C:S camera, **re-anchored** at your police station (the RPD) with heading and scale | The two worlds don't share coordinates, so an anchor maps one onto the other |

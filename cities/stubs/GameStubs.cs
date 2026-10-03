@@ -1,5 +1,5 @@
-// Compile-only stand-ins for the parts of Cities: Skylines, Unity 5.6, ColossalFramework, ICities, Harmony and
-// CitiesHarmony.API that the mod touches. They let CI type-check the whole mod without the game's DLLs. Every member
+// Compile-only stand-ins for the parts of Cities: Skylines, Unity 5.6, ColossalFramework and ICities
+// that the mod touches. They let CI type-check the whole mod without the game's DLLs. Every member
 // here mirrors the real signature as used by published CS1 mods; none of it ships, and none of it runs.
 // When the real build (RaccoonCitySkylines.csproj against the game's Managed folder) disagrees, the real one wins:
 // fix the mod, then this file.
@@ -53,6 +53,7 @@ namespace UnityEngine
     {
         public static Camera main;
         public float fieldOfView, nearClipPlane, farClipPlane;
+        public Vector3 WorldToScreenPoint(Vector3 position) { return position; }
     }
 
     public struct Vector3
@@ -72,6 +73,7 @@ namespace UnityEngine
         public float r, g, b, a;
         public Color(float r, float g, float b, float a) { this.r = r; this.g = g; this.b = b; this.a = a; }
         public static Color Lerp(Color a, Color b, float t) { return a; }
+        public static Color white { get { return new Color(1, 1, 1, 1); } }
     }
 
     public struct Rect
@@ -123,12 +125,15 @@ namespace UnityEngine
         public byte[] GetRawTextureData() { return null; }
         public void LoadRawTextureData(byte[] data) { }
         public void Apply(bool updateMipmaps) { }
+        public void SetPixel(int x, int y, Color color) { }
     }
 
     public static class GUI
     {
         public static void DrawTextureWithTexCoords(Rect position, Texture image, Rect texCoords) { }
         public static void Label(Rect position, string text) { }
+        public static void DrawTexture(Rect position, Texture image) { }
+        public static Color color;
     }
 
     public enum KeyCode { F9 = 290, F10 = 291, F11 = 292 }
@@ -216,36 +221,6 @@ namespace ICities
         object AddSlider(string text, float min, float max, float step, float defaultValue, OnValueChanged eventCallback);
         object AddTextfield(string text, string defaultContent, OnTextChanged eventChangedCallback, OnTextSubmitted eventSubmittedCallback = null);
         object AddButton(string text, OnButtonClicked eventCallback);
-    }
-}
-
-namespace CitiesHarmony.API
-{
-    public static class HarmonyHelper
-    {
-        public static bool IsHarmonyInstalled { get { return false; } }
-        public static void EnsureHarmonyInstalled() { }
-        public static void DoOnHarmonyReady(Action action) { }
-    }
-}
-
-namespace HarmonyLib
-{
-    public class Harmony
-    {
-        public Harmony(string id) { }
-        public MethodInfo Patch(MethodBase original, HarmonyMethod prefix = null, HarmonyMethod postfix = null, HarmonyMethod transpiler = null, HarmonyMethod finalizer = null) { return null; }
-        public void UnpatchAll(string harmonyID = null) { }
-    }
-
-    public class HarmonyMethod
-    {
-        public HarmonyMethod(Type type, string name, Type[] argumentTypes = null) { }
-    }
-
-    public static class AccessTools
-    {
-        public static MethodInfo Method(Type type, string name, Type[] parameters = null, Type[] generics = null) { return null; }
     }
 }
 
@@ -345,25 +320,6 @@ public class ElectricityManager
     public bool CheckElectricity(UnityEngine.Vector3 pos) { return true; }
 }
 
-public class OverlayEffect
-{
-    public void DrawCircle(RenderManager.CameraInfo cameraInfo, UnityEngine.Color color, UnityEngine.Vector3 center, float size, float minY, float maxY, bool renderLimits, bool alphaBlend) { }
-}
 
-public class RenderManager
-{
-    public class CameraInfo { }
-    public OverlayEffect OverlayEffect;
-}
 
-public struct DrawCallData
-{
-    public int m_overlayCalls;
-}
 
-public class ToolManager
-{
-    public static ToolManager instance;
-    public DrawCallData m_drawCallData;
-    protected void EndOverlayImpl(RenderManager.CameraInfo cameraInfo) { }
-}

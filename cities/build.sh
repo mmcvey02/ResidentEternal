@@ -6,7 +6,10 @@ here="$(cd "$(dirname "$0")" && pwd)"
 out="$here/build"
 mkdir -p "$out"
 mcs -target:library -langversion:7 -nowarn:1591 -out:"$out/GameStubs.dll" "$here/stubs/GameStubs.cs"
-mcs -target:library -langversion:7 -warnaserror+ -r:"$out/GameStubs.dll" -r:System.Xml.dll \
+# -langversion:4 because Cities: Skylines compiles source mods itself with an old Mono compiler, and the release ships
+# the mod as source; no reference beyond the game's own assemblies (mscorlib, System, UnityEngine, ColossalManaged,
+# ICities, Assembly-CSharp) for the same reason.
+mcs -target:library -langversion:4 -warnaserror+ -r:"$out/GameStubs.dll" \
     -out:"$out/RaccoonCitySkylines.dll" "$here"/RaccoonCitySkylines/*.cs
 # The tests compile the game-independent sources directly, so they run without any stub.
 mcs -langversion:7 -warnaserror+ -out:"$out/Tests.exe" "$here/tests/Tests.cs" \

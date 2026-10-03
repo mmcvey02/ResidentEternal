@@ -1,6 +1,6 @@
 using System;
 using System.IO;
-using System.Xml.Serialization;
+using System.Collections.Generic;
 
 namespace RaccoonCitySkylines
 {
@@ -26,14 +26,9 @@ namespace RaccoonCitySkylines
         public int MaxInfectionsPerStep = 12;
         public bool ShowBodycam = true;
 
-        [XmlIgnore]
         public static string Path
         {
-            get
-            {
-                string dir = ColossalFramework.IO.DataLocation.localApplicationData;
-                return System.IO.Path.Combine(dir, "RaccoonCitySkylines.xml");
-            }
+            get { return System.IO.Path.Combine(ColossalFramework.IO.DataLocation.localApplicationData, "RaccoonCitySkylines.json"); }
         }
 
         static Settings instance;
@@ -50,25 +45,50 @@ namespace RaccoonCitySkylines
 
         static Settings Load()
         {
+            var s = new Settings();
             try
             {
                 if (File.Exists(Path))
-                    using (var r = new StreamReader(Path))
-                        return (Settings)new XmlSerializer(typeof(Settings)).Deserialize(r);
+                    s.Apply(Json.Parse(File.ReadAllText(Path)) as Dictionary<string, object>);
             }
             catch (Exception e)
             {
                 Log.Warn("settings unreadable, using defaults: " + e.Message);
             }
-            return new Settings();
+            return s;
+        }
+
+        /// <summary>Takes every known field from a parsed settings file; missing or wrong-typed ones keep their defaults.</summary>
+        public void Apply(Dictionary<string, object> o)
+        {
+            if (o == null)
+                return;
+            Port = (int)Json.Num(o, "port", Port);
+            AnchorAtPoliceStation = Json.Bool(o, "anchorAtPoliceStation", AnchorAtPoliceStation);
+            AnchorX = (float)Json.Num(o, "anchorX", AnchorX);
+            AnchorZ = (float)Json.Num(o, "anchorZ", AnchorZ);
+            HeadingDeg = (float)Json.Num(o, "headingDeg", HeadingDeg);
+            EyeHeight = (float)Json.Num(o, "eyeHeight", EyeHeight);
+            Scale = (float)Json.Num(o, "scale", Scale);
+            FlipZ = Json.Bool(o, "flipZ", FlipZ);
+            FeedFps = (float)Json.Num(o, "feedFps", FeedFps);
+            Outbreak = Json.Bool(o, "outbreak", Outbreak);
+            MaxInfectionsPerStep = (int)Json.Num(o, "maxInfectionsPerStep", MaxInfectionsPerStep);
+            ShowBodycam = Json.Bool(o, "showBodycam", ShowBodycam);
+        }
+
+        public Dictionary<string, object> ToJson()
+        {
+            return Json.Obj("port", Port, "anchorAtPoliceStation", AnchorAtPoliceStation, "anchorX", AnchorX, "anchorZ", AnchorZ,
+                "headingDeg", HeadingDeg, "eyeHeight", EyeHeight, "scale", Scale, "flipZ", FlipZ, "feedFps", FeedFps,
+                "outbreak", Outbreak, "maxInfectionsPerStep", MaxInfectionsPerStep, "showBodycam", ShowBodycam);
         }
 
         public void Save()
         {
             try
             {
-                using (var w = new StreamWriter(Path))
-                    new XmlSerializer(typeof(Settings)).Serialize(w, this);
+                File.WriteAllText(Path, Json.Write(ToJson()));
             }
             catch (Exception e)
             {

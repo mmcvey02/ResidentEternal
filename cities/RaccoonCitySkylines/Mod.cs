@@ -1,5 +1,4 @@
 using System.Globalization;
-using CitiesHarmony.API;
 using ICities;
 
 namespace RaccoonCitySkylines
@@ -11,11 +10,6 @@ namespace RaccoonCitySkylines
         public string Description
         {
             get { return "Resident Evil 2 x Cities: Skylines passthrough: your city becomes RE2's skyline, and RE2 fights its T-virus outbreak."; }
-        }
-
-        public void OnEnabled()
-        {
-            HarmonyHelper.EnsureHarmonyInstalled();
         }
 
         public void OnSettingsUI(UIHelperBase helper)

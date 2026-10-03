@@ -23,10 +23,9 @@ jobs:
         run: tools/check_shader.sh
       - name: Passthrough - cross-language end-to-end tests
         run: python -m pytest tests -v
+      - name: Package the release zip
+        run: tools/package.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: RaccoonSkylines-re2
-          path: |
-            re2/build/win64/RaccoonSkylines.dll
-            re2/lua/raccoon_skylines.lua
-            re2/shaders/RaccoonSkylines.fx
+          name: RaccoonCitySkylines
+          path: dist/*.zip

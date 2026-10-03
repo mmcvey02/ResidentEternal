@@ -18,6 +18,7 @@ namespace RaccoonCitySkylines
         readonly OutbreakController outbreak = new OutbreakController();
         SkylineExporter exporter;
         BodycamPanel bodycam;
+        LeonMarker marker;
         int seenConnections;
         Dictionary<string, object> lastCam;
         float nextCityMessage;
@@ -45,6 +46,7 @@ namespace RaccoonCitySkylines
             exporter.Infection = () => (float)outbreak.Model.Infection[outbreak.AnchorDistrict];
             bodycam = gameObject.AddComponent<BodycamPanel>();
             bodycam.enabled = settings.ShowBodycam;
+            marker = gameObject.AddComponent<LeonMarker>();
 
             link = new LinkServer(settings.Port) { Log = Log.Info };
             try
@@ -87,7 +89,7 @@ namespace RaccoonCitySkylines
             else if (!feed && camSync.Driving)
                 camSync.End();
             bodycam.Suppressed = camSync.Driving;
-            LeonMarker.Visible = !camSync.Driving && link.Connected && camSync.Mapper.HasOrigin;
+            marker.Visible = !camSync.Driving && link.Connected && camSync.Mapper.HasOrigin;
             exporter.Fps = settings.FeedFps;
             if (exporter.enabled != feed)
                 exporter.enabled = feed;
@@ -136,9 +138,9 @@ namespace RaccoonCitySkylines
             Vec3 p;
             Quat unused;
             camSync.Mapper.Map(new Vec3(pos[0], pos[1], pos[2]), Quat.Identity, out p, out unused);
-            LeonMarker.Position = new Vector3((float)p.X, (float)p.Y, (float)p.Z);
+            marker.Position = new Vector3((float)p.X, (float)p.Y, (float)p.Z);
             double hp = Json.Num(m, "hp", -1);
-            LeonMarker.Health = hp < 0 ? 1f : Mathf.Clamp01((float)hp);
+            marker.Health = hp < 0 ? 1f : Mathf.Clamp01((float)hp);
             string area = Json.Str(m, "area");
             bodycam.Status = (area.Length > 0 ? area + "  " : "") + (hp < 0 ? "" : "HP " + Mathf.RoundToInt((float)hp * 100f) + "%");
         }
@@ -215,7 +217,6 @@ namespace RaccoonCitySkylines
         {
             camSync.End();
             outbreak.Save(cityName);
-            LeonMarker.Visible = false;
             if (link != null)
                 link.Dispose();
         }

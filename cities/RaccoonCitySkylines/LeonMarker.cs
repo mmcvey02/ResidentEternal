@@ -1,36 +1,45 @@
-using ColossalFramework;
-using HarmonyLib;
 using UnityEngine;
 
 namespace RaccoonCitySkylines
 {
-    /// <summary>Draws where the RE2 survivor is on the city map (a pulsing ring), via a Harmony postfix on the overlay pass.</summary>
-    public static class LeonMarker
+    /// <summary>
+    /// Shows where the RE2 survivor is in the city: a pulsing marker drawn over the city view, coloured by health.
+    /// Drawn with OnGUI from the world position, so the mod needs nothing beyond the game's own assemblies.
+    /// </summary>
+    public sealed class LeonMarker : MonoBehaviour
     {
-        const string HarmonyId = "raccoon.city.skylines";
-        public static bool Visible;
-        public static Vector3 Position;
-        public static float Health = 1f;
+        public bool Visible;
+        public Vector3 Position;
+        public float Health = 1f;
+        Texture2D dot;
 
-        public static void Patch()
+        void OnGUI()
         {
-            var h = new Harmony(HarmonyId);
-            h.Patch(AccessTools.Method(typeof(ToolManager), "EndOverlayImpl"), postfix: new HarmonyMethod(typeof(LeonMarker), nameof(Postfix)));
-        }
-
-        public static void Unpatch()
-        {
-            new Harmony(HarmonyId).UnpatchAll(HarmonyId);
-        }
-
-        static void Postfix(RenderManager.CameraInfo cameraInfo)
-        {
-            if (!Visible)
+            Camera cam = Camera.main;
+            if (!Visible || cam == null)
                 return;
-            float pulse = 1f + 0.25f * Mathf.Sin(Time.realtimeSinceStartup * 4f);
-            Color c = Color.Lerp(new Color(0.9f, 0.1f, 0.1f, 0.8f), new Color(0.2f, 0.9f, 0.3f, 0.8f), Health);
-            Singleton<RenderManager>.instance.OverlayEffect.DrawCircle(cameraInfo, c, Position, 24f * pulse, Position.y - 50f, Position.y + 50f, false, true);
-            ToolManager.instance.m_drawCallData.m_overlayCalls++;
+            Vector3 s = cam.WorldToScreenPoint(Position);
+            if (s.z <= 0f)
+                return; // behind the camera
+            if (dot == null)
+            {
+                dot = new Texture2D(1, 1, TextureFormat.RGBA32, false);
+                dot.SetPixel(0, 0, Color.white);
+                dot.Apply(false);
+            }
+            float size = 14f + 4f * Mathf.Sin(Time.realtimeSinceStartup * 4f);
+            float x = s.x, y = Screen.height - s.y; // GUI space is top-down
+            Color old = GUI.color;
+            GUI.color = Color.Lerp(new Color(0.9f, 0.1f, 0.1f, 0.9f), new Color(0.2f, 0.9f, 0.3f, 0.9f), Health);
+            GUI.DrawTexture(new Rect(x - size / 2f, y - size / 2f, size, size), dot);
+            GUI.color = old;
+            GUI.Label(new Rect(x + size, y - 10f, 200f, 24f), "SURVIVOR");
+        }
+
+        void OnDestroy()
+        {
+            if (dot != null)
+                Destroy(dot);
         }
     }
 }

@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    The real build, against your Cities: Skylines install. Needs the .NET SDK (any recent one) on Windows:
+      dotnet build -c Release cities/RaccoonCitySkylines/RaccoonCitySkylines.csproj
+    Set CitiesManaged if your game is not in the default Steam folder, e.g.
+      dotnet build -c Release -p:CitiesManaged="D:\SteamLibrary\steamapps\common\Cities_Skylines\Cities_Data\Managed"
+    The DLLs land in the game's local mods folder (Addons\Mods\RaccoonCitySkylines), ready to enable in Content Manager.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net35</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <AssemblyName>RaccoonCitySkylines</AssemblyName>
+    <RootNamespace>RaccoonCitySkylines</RootNamespace>
+    <Deterministic>true</Deterministic>
+    <CitiesManaged Condition="'$(CitiesManaged)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Cities_Skylines\Cities_Data\Managed</CitiesManaged>
+    <ModsDir>$(LOCALAPPDATA)\Colossal Order\Cities_Skylines\Addons\Mods\$(AssemblyName)</ModsDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net35" Version="1.0.3" PrivateAssets="all" />
+    <PackageReference Include="CitiesHarmony.API" Version="2.2.0" />
+    <PackageReference Include="Lib.Harmony" Version="2.2.2" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp"><HintPath>$(CitiesManaged)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ColossalManaged"><HintPath>$(CitiesManaged)\ColossalManaged.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ICities"><HintPath>$(CitiesManaged)\ICities.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(CitiesManaged)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <Target Name="DeployToMods" AfterTargets="Build" Condition="'$(OS)' == 'Windows_NT'">
+    <MakeDir Directories="$(ModsDir)" />
+    <Copy SourceFiles="$(TargetPath);$(OutDir)CitiesHarmony.API.dll" DestinationFolder="$(ModsDir)" />
+    <Message Importance="high" Text="Raccoon City Skylines -> $(ModsDir)" />
+  </Target>
+</Project>

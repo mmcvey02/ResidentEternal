@@ -1,0 +1,32 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchains
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq mono-mcs mono-devel g++-mingw-w64-x86-64 lua5.4
+          pip install pytest
+      - name: Cities - type-check the mod against stubs, unit tests
+        run: cities/build.sh
+      - name: RE2 - cross-compile the plugin DLL
+        run: re2/build_mingw.sh
+      - name: RE2 - Lua syntax
+        run: luac5.4 -p re2/lua/raccoon_skylines.lua
+      - name: RE2 - compile the shader with ReShade's FX compiler
+        run: tools/check_shader.sh
+      - name: Passthrough - cross-language end-to-end tests
+        run: python -m pytest tests -v
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RaccoonSkylines-re2
+          path: |
+            re2/build/win64/RaccoonSkylines.dll
+            re2/lua/raccoon_skylines.lua
+            re2/shaders/RaccoonSkylines.fx

@@ -18,6 +18,8 @@
 #include <sstream>
 #include <string>
 #include <windows.h>
+#include <psapi.h>
+#include <cstdio>
 #include <reframework/API.hpp>
 
 using reframework::API;
@@ -45,9 +47,56 @@ namespace
 	double g_lastForwardedEvent = 0;
 	fs::file_time_type g_re2Mtime{};
 
+	std::mutex g_logLock;
+
+	/// Logs to REFramework's log and to reframework/data/raccoon_skylines/plugin.log (ours alone, easy to send).
 	void log_info(const std::string &s)
 	{
 		API::get()->log_info("[RaccoonSkylines] %s", s.c_str());
+		if (g_dataDir.empty())
+			return;
+		std::lock_guard<std::mutex> g(g_logLock);
+		std::ofstream out(g_dataDir / "plugin.log", std::ios::app);
+		SYSTEMTIME t;
+		GetLocalTime(&t);
+		char stamp[32];
+		std::snprintf(stamp, sizeof(stamp), "%02d:%02d:%02d.%03d ", t.wHour, t.wMinute, t.wSecond, t.wMilliseconds);
+		out << stamp << s << "\n";
+	}
+
+	bool g_reshadeRegistered = false;
+	bool g_sawBeginRendering = false;
+	DWORD g_nextRegisterLog = 0;
+
+	/// Registers with ReShade, logging the outcome (and why it keeps failing, every 10 seconds).
+	void register_with_reshade(const char *from)
+	{
+		if (g_reshadeRegistered)
+			return;
+		if (rcsk::compositor::try_register(g_module))
+		{
+			g_reshadeRegistered = true;
+			log_info(std::string("registered with ReShade (from ") + from + ")");
+			return;
+		}
+		const DWORD now = GetTickCount();
+		if (now < g_nextRegisterLog)
+			return;
+		g_nextRegisterLog = now + 10000;
+		// Find what ReShade module, if any, is in the process.
+		HMODULE modules[1024];
+		DWORD needed = 0;
+		std::string found = "none";
+		if (EnumProcessModules(GetCurrentProcess(), modules, sizeof(modules), &needed))
+			for (DWORD i = 0; i < needed / sizeof(HMODULE); ++i)
+				if (GetProcAddress(modules[i], "ReShadeRegisterAddon") != nullptr)
+				{
+					wchar_t name[MAX_PATH] = {};
+					GetModuleFileNameW(modules[i], name, MAX_PATH);
+					found = fs::path(name).filename().string();
+				}
+		log_info(std::string("ReShade add-on registration failed (from ") + from + "); module exporting ReShadeRegisterAddon: " + found +
+			(found == "none" ? " -> install ReShade *with full add-on support*" : " -> ReShade refused this add-on's API version"));
 	}
 
 	fs::path game_dir()
@@ -183,9 +232,19 @@ namespace
 			}
 	}
 
+	void on_present()
+	{
+		register_with_reshade("present");
+	}
+
 	void on_begin_rendering()
 	{
-		rcsk::compositor::try_register(g_module);
+		if (!g_sawBeginRendering)
+		{
+			g_sawBeginRendering = true;
+			log_info("first BeginRendering callback");
+		}
+		register_with_reshade("BeginRendering");
 		if (!g_link)
 			return;
 		if (g_link->generation() != g_generation && g_link->connected())
@@ -225,13 +284,18 @@ extern "C" __declspec(dllexport) bool reframework_plugin_initialize(const REFram
 	std::error_code ec;
 	fs::create_directories(g_dataDir, ec);
 	std::string msg;
+	log_info("---- RaccoonSkylines plugin initializing (REFramework plugin API " + std::to_string(REFRAMEWORK_PLUGIN_VERSION_MAJOR) + "." +
+		std::to_string(REFRAMEWORK_PLUGIN_VERSION_MINOR) + ")");
 	g_cfg = rcsk::Config::load_or_create(g_dataDir / "config.json", msg);
 	log_info(msg);
 	rcsk::compositor::set_bodycam(g_cfg.bodycam_every, g_cfg.bodycam_width);
 	g_link = std::make_unique<rcsk::Link>(g_cfg.port);
 	g_link->log = [](const std::string &s) { log_info(s); };
 	g_link->start();
-	param->functions->on_pre_application_entry("BeginRendering", on_begin_rendering);
+	const bool hooked = param->functions->on_pre_application_entry("BeginRendering", on_begin_rendering);
+	const bool presentHooked = param->functions->on_present(on_present);
+	log_info(std::string("BeginRendering callback ") + (hooked ? "installed" : "REFUSED") + ", present callback " + (presentHooked ? "installed" : "REFUSED"));
+	register_with_reshade("initialize");
 	log_info("loaded; looking for Cities: Skylines on 127.0.0.1:" + std::to_string(g_cfg.port));
 	return true;
 }

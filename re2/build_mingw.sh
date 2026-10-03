@@ -13,5 +13,5 @@ command -v "$CXX" >/dev/null || CXX=x86_64-w64-mingw32-g++
   -I"$here/src" -isystem "$here/src/mingw_shim" -isystem "$here/third_party/reframework/include" -isystem "$here/third_party/reshade/include" \
   "$here/src/plugin.cpp" "$here/src/compositor.cpp" "$here/src/re_camera.cpp" "$here/src/config.cpp" \
   "$here/src/common/json_lite.cpp" "$here/src/common/link.cpp" "$here/src/common/frames.cpp" \
-  -o "$out/RaccoonSkylines.dll" -lws2_32 -static -static-libgcc -static-libstdc++
+  -o "$out/RaccoonSkylines.dll" -lws2_32 -lpsapi -static -static-libgcc -static-libstdc++
 echo "built $out/RaccoonSkylines.dll"

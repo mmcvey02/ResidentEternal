@@ -315,10 +315,6 @@ public class ImmaterialResourceManager
     public void CheckLocalResource(Resource resource, UnityEngine.Vector3 position, out int local) { local = 0; }
 }
 
-public class ElectricityManager
-{
-    public bool CheckElectricity(UnityEngine.Vector3 pos) { return true; }
-}
 
 
 

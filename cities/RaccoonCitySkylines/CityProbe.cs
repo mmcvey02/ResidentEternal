@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using ColossalFramework;
 using UnityEngine;
 
@@ -48,6 +49,27 @@ namespace RaccoonCitySkylines
             return Mathf.Clamp01(local / 100f); // ~100 is what the game's info view shows as fully covered
         }
 
+        // Whether a building has power, read by name at runtime so the mod compiles against any game version:
+        // a building without electricity counts up m_electricityProblemTimer. If the field is missing, every
+        // building counts as powered (no blackouts) instead of the mod failing to build.
+        static readonly FieldInfo ElectricityProblemTimer = typeof(Building).GetField("m_electricityProblemTimer", BindingFlags.Public | BindingFlags.Instance);
+        static bool warnedNoPowerField;
+
+        static bool HasPower(ref Building b)
+        {
+            if (ElectricityProblemTimer == null)
+            {
+                if (!warnedNoPowerField)
+                {
+                    warnedNoPowerField = true;
+                    Log.Warn("Building.m_electricityProblemTimer not found; blackouts are off");
+                }
+                return true;
+            }
+            object v = ElectricityProblemTimer.GetValue(b);
+            return v == null || Convert.ToInt32(v) == 0;
+        }
+
         /// <summary>Fills one DistrictInput per district from up to `budget` residential buildings.</summary>
         public static void Read(DistrictInput[] inputs, int budget = 4096)
         {
@@ -66,7 +88,6 @@ namespace RaccoonCitySkylines
                 }
             }
             Building[] buildings = Singleton<BuildingManager>.instance.m_buildings.m_buffer;
-            ElectricityManager power = Singleton<ElectricityManager>.instance;
             int step = Mathf.Max(1, buildings.Length / budget);
             int offset = UnityEngine.Random.Range(0, step);
             for (int i = 1 + offset; i < buildings.Length; i += step)
@@ -82,7 +103,7 @@ namespace RaccoonCitySkylines
                     continue;
                 police[d] += Coverage(ImmaterialResourceManager.Resource.PoliceDepartment, p);
                 health[d] += Coverage(ImmaterialResourceManager.Resource.HealthCare, p);
-                powered[d] += power.CheckElectricity(p) ? 1 : 0;
+                powered[d] += HasPower(ref buildings[i]) ? 1 : 0;
                 samples[d]++;
             }
             for (int d = 0; d < inputs.Length; d++)

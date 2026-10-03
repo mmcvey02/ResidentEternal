@@ -154,8 +154,21 @@ namespace
 			return;
 		g_nextCam = now + std::chrono::microseconds(int64_t(1e6 / g_cfg.cam_hz));
 		rcsk::CameraPose cam;
+		static int camState = 0; // 0 unknown, 1 working, 2 failing
 		if (!rcsk::read_camera(cam))
+		{
+			if (camState != 2)
+				log_info("reading RE2's camera failed (normal on menus and loading screens)");
+			camState = 2;
 			return;
+		}
+		if (camState != 1)
+		{
+			char buf[160];
+			std::snprintf(buf, sizeof(buf), "reading RE2's camera: pos %.2f %.2f %.2f, fov %.1f", cam.pos[0], cam.pos[1], cam.pos[2], cam.fov);
+			log_info(buf);
+		}
+		camState = 1;
 		uint32_t w = 0, h = 0;
 		rcsk::compositor::backbuffer_size(w, h);
 		if (w == 0 || h == 0)
@@ -232,9 +245,21 @@ namespace
 			}
 	}
 
+	void do_frame();
+	bool g_sawPresent = false;
+
+	/// RE2 may never fire the BeginRendering entry under some REFramework/game versions, so present (which always
+	/// runs, it is where REFramework's own Lua on_frame callbacks run) also drives the frame until BeginRendering shows up.
 	void on_present()
 	{
+		if (!g_sawPresent)
+		{
+			g_sawPresent = true;
+			log_info("first present callback");
+		}
 		register_with_reshade("present");
+		if (!g_sawBeginRendering)
+			do_frame();
 	}
 
 	void on_begin_rendering()
@@ -244,7 +269,11 @@ namespace
 			g_sawBeginRendering = true;
 			log_info("first BeginRendering callback");
 		}
-		register_with_reshade("BeginRendering");
+		do_frame();
+	}
+
+	void do_frame()
+	{
 		if (!g_link)
 			return;
 		if (g_link->generation() != g_generation && g_link->connected())

@@ -10,9 +10,8 @@
 --     makes Raccoon City's zombies tougher;
 --   * an on-screen line shows the district, its infection and whether the power is on.
 --
--- RE2 type, field and method names below are marked VERIFY: they are this project's best knowledge of RE2 (2019)
--- and must be checked against your game build in REFramework's Object Explorer (Developer Tools) before you trust
--- them. Every lookup is guarded: a wrong name disables that one feature, logs once, and the rest keeps working.
+-- RE2 names below marked VERIFY are this project's best knowledge of RE2 (2019) and should be checked against your
+-- build in REFramework's Object Explorer (Developer Tools). Every lookup is guarded: a wrong name disables that one feature, logs once, and the rest keeps working.
 -- The "Send test ..." buttons exercise the whole pipeline without any of them.
 
 local CFG = {
@@ -33,11 +32,17 @@ local CFG = {
         hp_current = "get_CurrentHitPoint",        -- VERIFY
         hp_max = "get_DefaultHitPoint",            -- VERIFY
     },
-    -- Methods to hook for events. Each is optional; fill in what your build's Object Explorer shows.
-    hooks = {
-        { kind = "kill",   type = "app.ropeway.EnemyController", method = "onDead" },        -- VERIFY
-        { kind = "tyrant", type = "app.ropeway.enemy.em6200.Em6200Controller", method = "start" }, -- VERIFY (em6200 = Mr. X)
+    -- Events come from watching the scene twice a second (no method hooks needed). These type names are confirmed
+    -- in RE2's type list (REFramework log, March 2025 build); the hit point method names are still VERIFY.
+    watch = {
+        enemy = "app.ropeway.EnemyController",
+        enemy_hp = { "app.ropeway.EnemyHitPointController", "app.ropeway.HitPointController" },
+        hp_current = "get_CurrentHitPoint", -- VERIFY
+        tyrant = "app.ropeway.enemy.em6200.Em6200ChaserController", -- Mr. X (em6200)
+        hz = 2,
     },
+    -- Optional extra method hooks, if you find better ones in the Object Explorer: { kind = "kill", type = "...", method = "..." }
+    hooks = {},
     write_hz = 4,
 }
 
@@ -85,6 +90,71 @@ for _, h in ipairs(CFG.hooks) do
     else
         warn_once("hook" .. h.kind, "no " .. h.type .. "." .. h.method .. " in this build; '" .. h.kind .. "' events are off (see CFG.hooks)")
     end
+end
+
+-- Watching the scene for kills and Mr. X ---------------------------------------------------------------------------
+
+local watch_state = { alive = {}, tyrant = false, next = 0 }
+
+local function scene_components(type_name)
+    local sm = sdk.get_native_singleton("via.SceneManager")
+    local smt = sdk.find_type_definition("via.SceneManager")
+    if not sm or not smt then return nil end
+    local scene = sdk.call_native_func(sm, smt, "get_CurrentScene")
+    if not scene then return nil end
+    local arr = scene:call("findComponents(System.Type)", sdk.typeof(type_name))
+    if not arr then return nil end
+    -- REFramework's SystemArray: get_elements(), or get_size() + get_element(i).
+    local ok, elems = pcall(function() return arr:get_elements() end)
+    if ok and type(elems) == "table" then return elems end
+    local out = {}
+    for i = 0, (arr:get_size() or 0) - 1 do
+        local c = arr:get_element(i)
+        if c then table.insert(out, c) end
+    end
+    return out
+end
+
+local function enemy_hp(enemy)
+    local go = enemy:call("get_GameObject")
+    if not go then return nil end
+    for _, t in ipairs(CFG.watch.enemy_hp) do
+        local td = sdk.typeof(t)
+        if td then
+            local c = go:call("getComponent(System.Type)", td)
+            if c then return c:call(CFG.watch.hp_current) end
+        end
+    end
+    return nil
+end
+
+local function watch_scene()
+    local w = CFG.watch
+    local enemies = scene_components(w.enemy)
+    if enemies then
+        local seen = {}
+        for _, e in ipairs(enemies) do
+            local key = e:get_address()
+            seen[key] = true
+            local ok, hp = pcall(enemy_hp, e)
+            if ok and hp ~= nil then
+                local alive = hp > 0
+                if watch_state.alive[key] == true and not alive then
+                    push_event("kill", { enemy = e:get_type_definition():get_full_name() })
+                end
+                watch_state.alive[key] = alive
+            elseif not ok then
+                warn_once("enemyhp", "enemy hit points unreadable (" .. tostring(hp) .. "); kill events are off (see CFG.watch)")
+            end
+        end
+        for key in pairs(watch_state.alive) do
+            if not seen[key] then watch_state.alive[key] = nil end -- despawned or unloaded: not a kill
+        end
+    end
+    local tyrants = scene_components(w.tyrant)
+    local present = tyrants ~= nil and #tyrants > 0
+    if present and not watch_state.tyrant then push_event("tyrant", {}) end
+    watch_state.tyrant = present
 end
 
 -- The survivor -----------------------------------------------------------------------------------------------------
@@ -160,6 +230,11 @@ end
 
 re.on_frame(function()
     local now = os.clock()
+    if now >= watch_state.next then
+        watch_state.next = now + 1 / CFG.watch.hz
+        local ok, err = pcall(watch_scene)
+        if not ok then warn_once("watch", "watching the scene failed: " .. tostring(err)) end
+    end
     if now >= state.next_io then
         state.next_io = now + 1 / CFG.write_hz
         local ok, err = pcall(exchange)

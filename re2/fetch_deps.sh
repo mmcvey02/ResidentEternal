@@ -7,7 +7,7 @@ set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 tp="$here/third_party"
 REF_REF="${REF_REF:-master}"
-RESHADE_REF="${RESHADE_REF:-main}"
+RESHADE_REF="${RESHADE_REF:-v6.3.0}"  # build against an older add-on API: the add-on then loads in ReShade 6.3.0 and every newer version
 mkdir -p "$tp"
 
 fetch() { # name url ref subdir

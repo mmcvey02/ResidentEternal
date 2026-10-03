@@ -66,7 +66,7 @@ namespace rcsk::compositor
 			if (info.width != g_texW || info.height != g_texH)
 			{
 				destroy_texture(dev);
-				if (!dev->create_resource(resource_desc(info.width, info.height, 1, 1, format::r8g8b8a8_unorm, 1, memory_heap::default_,
+				if (!dev->create_resource(resource_desc(info.width, info.height, 1, 1, format::r8g8b8a8_unorm, 1, memory_heap::gpu_only,
 											  resource_usage::shader_resource | resource_usage::copy_dest),
 						nullptr, resource_usage::shader_resource, &g_tex) ||
 					!dev->create_resource_view(g_tex, resource_usage::shader_resource, resource_view_desc(format::r8g8b8a8_unorm), &g_srv))
@@ -201,16 +201,27 @@ namespace rcsk::compositor
 		}
 	}
 
+	// reshade::register_event static_casts the callback to void*, which MSVC accepts and GCC rejects; this is the same
+	// call with a reinterpret_cast, so MinGW can build the add-on.
+	template <reshade::addon_event ev>
+	void on(typename reshade::addon_event_traits<ev>::decl callback)
+	{
+		static const auto func = reinterpret_cast<void (*)(reshade::addon_event, void *)>(
+			GetProcAddress(reshade::internal::get_reshade_module_handle(), "ReShadeRegisterEvent"));
+		if (func != nullptr)
+			func(ev, reinterpret_cast<void *>(callback));
+	}
+
 	bool try_register(void *module)
 	{
 		if (g_registered)
 			return true;
-		if (!reshade::register_addon(module))
+		if (!reshade::register_addon(static_cast<HMODULE>(module)))
 			return false;
-		reshade::register_event<reshade::addon_event::reshade_begin_effects>(on_begin_effects);
-		reshade::register_event<reshade::addon_event::reshade_present>(on_present);
-		reshade::register_event<reshade::addon_event::reshade_reloaded_effects>(on_reloaded_effects);
-		reshade::register_event<reshade::addon_event::destroy_effect_runtime>(on_destroy_effect_runtime);
+		on<reshade::addon_event::reshade_begin_effects>(on_begin_effects);
+		on<reshade::addon_event::reshade_present>(on_present);
+		on<reshade::addon_event::reshade_reloaded_effects>(on_reloaded_effects);
+		on<reshade::addon_event::destroy_effect_runtime>(on_destroy_effect_runtime);
 		g_registered = true;
 		reshade::log::message(reshade::log::level::info, "RaccoonSkylines: registered with ReShade");
 		return true;
@@ -219,7 +230,7 @@ namespace rcsk::compositor
 	void unregister(void *module)
 	{
 		if (g_registered.exchange(false))
-			reshade::unregister_addon(module);
+			reshade::unregister_addon(static_cast<HMODULE>(module));
 	}
 
 	void set_city(const CityLook &look)

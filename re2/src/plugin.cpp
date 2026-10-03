@@ -203,12 +203,19 @@ namespace
 	}
 }
 
+// How ReShade labels the add-on in its Add-ons tab.
+extern "C"
+{
+	__declspec(dllexport) const char *NAME = "RaccoonSkylines";
+	__declspec(dllexport) const char *DESCRIPTION = "Draws your Cities: Skylines city into RE2's sky and sends RE2's picture back as the bodycam.";
+}
+
 extern "C" __declspec(dllexport) void reframework_plugin_required_version(REFrameworkPluginVersion *version)
 {
 	version->major = REFRAMEWORK_PLUGIN_VERSION_MAJOR;
 	version->minor = REFRAMEWORK_PLUGIN_VERSION_MINOR;
 	version->patch = REFRAMEWORK_PLUGIN_VERSION_PATCH;
-	version->game_name = "RE2";
+	// No game_name: REFramework compares it to its own internal name, and a mismatch would refuse the plugin.
 }
 
 extern "C" __declspec(dllexport) bool reframework_plugin_initialize(const REFrameworkPluginInitializeParam *param)
